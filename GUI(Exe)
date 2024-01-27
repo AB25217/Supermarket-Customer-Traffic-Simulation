@@ -1,0 +1,282 @@
+"""Author: Aleksandar Bozov and Peter Yovchev
+Description: To create a working simulation for the supermarket, as well as an GUI accompanying it, that will bring in dynaminism and interactivity to the simulation
+"""
+import tkinter 
+import threading    
+from tkinter import ttk
+from SimulationClass import Simulation
+import time
+
+class GUI: 
+    """
+    DescriptionL: A GUI using tkinter.Tk(), that will be used to provide user interactiivity as well as real time representation of lane and customer data
+
+    Attributes:
+        simulation = instance of simulation class
+
+        gui_update_termination_flag = a boolean flag that will terminate the while loop of the gui_update method, effectively terminating the method
+    Methods:
+        gui_update_information = a method that will continually update GUI widgets to simulation information
+    """
+
+    def __init__(self, master):
+        #Code below will show all attributes relevant to the simulation
+        self._simulation = Simulation(100, 4, 25) # a simulation class instance from which the simulation will be ran from. Change the parameters in order to update the duration, time intervals for customers joining, and the limit of customers that could join
+        self._gui_update_termination_flag = False # flag will terminate the gui_update method, as the method rans a while True loop. Essential for stopping the simulation
+
+        #Code below is to initialise and design the window
+        self._window = master # assigns the widnow to self.window name for easier management 
+        self._window.title("Supermarket Simulation Checkout") # Title of the Window
+        self._window.geometry("600x950") # The geometry of the window
+
+        #Code below will create a canvas frame, that will group all other frames in the simulation for easier use
+        self._mainframe = tkinter.Frame(self._window, highlightbackground="black", highlightthickness=2) # canvas frame 
+        self._mainframe.pack(anchor="n")
+
+        self._mainframe.columnconfigure((0,1), weight=1, uniform="mainframe1")
+        self._mainframe.rowconfigure((0,1,2), weight=1, uniform="mainframe1")
+
+
+        #Code below will create a frame which will store the current time, the start button, the stop button and the end button
+        self._buttons_frame = tkinter.Frame(self._mainframe, highlightbackground="blue", highlightthickness=2)
+        self._buttons_frame.grid(row=0, column=1,sticky="nswe", columnspan=1)
+
+        # Code below will design a label showing the text "Current Time"
+        self._time_label = tkinter.Label(self._buttons_frame, text="Current Time: " ) # attach label to main window, with the text "Current time"
+        self._time_label.pack() # Pack Method will roughly position all widgets in a window at the centre of the window
+    
+        # Code below will show the current time
+        self._current_time_label = tkinter.Label(self._buttons_frame, text=None)
+        self._current_time_label.pack()
+
+        #Code below will be a button, which once pressed, will start the simulation
+        self._start_button = tkinter.Button(self._buttons_frame, text="START", command=self.__simulation_start).pack()
+        
+
+        #Code Below will be a button, which once pressed will end the simulation:
+        self._stop_button = tkinter.Button(self._buttons_frame, text="STOP", command=(self.__simulation_end)).pack()
+        
+
+        #Code Below will be a the exit window button for the GUI
+        self._exit_button = tkinter.Button(self._buttons_frame, text="EXIT", command=self.__exit_window).pack()
+    
+        #Code below will display all lanes in console, with the use of an button
+        #THIS WAS DONE BY PETER YOVCHEV FOR LOGBOOK TASK 1
+        #Please check the accompanying note file for a reference for which partner did what
+        self._console_all_customers = tkinter.Button(self._buttons_frame, text="Display all customers in console", command=self._simulation.events.display_all_customers_in_console).pack()
+        
+        #Code below will display all lanes in console
+        #THIS WAS DONE BY ALEKSANDAR BOZOV FOR LOGBOOK TASK 1
+        #Please check the accompanying note file for a reference for which partner did what 
+        self._console_all_lanes = tkinter.Button(self._buttons_frame, text="Display All Lanes", command=self._simulation.events.display_all_lanes_in_console).pack()
+        
+        
+        #Code below will be of a frame that will store information about customers who are lottery winners
+        self._lottery_winner_frame = tkinter.Frame(self._mainframe, highlightbackground="green", highlightthickness=2)
+        self._lottery_winner_frame.grid(row=0, column=0, sticky="nswe", columnspan=1)
+        self._lottery_winner_label1 = tkinter.Label(self._lottery_winner_frame, text="Lottery Winners").pack() # Label that reads "Lottery Winners", that will be packed at the top of the lottery winner frame
+        self._lottery_winner_treeview = ttk.Treeview(self._lottery_winner_frame) # Creates a Treeview which show all lottery winner customers
+        self._lottery_winner_treeview.pack() # pack the lottery winner treeview into the frame
+
+        #Code below will create and format columns for the GUI
+        self._lottery_winner_treeview['columns'] = ["ID", "Basket", "Lottery Winner?"]
+
+        self._lottery_winner_treeview.column("#0", width=50) # This columns will hold the names of the lottery winners in the simulation
+        self._lottery_winner_treeview.column("ID", width=30, minwidth=30) # This column will show the current lottery winners 
+        self._lottery_winner_treeview.column("Basket", width=50, minwidth=42) #Basket Size of Customer
+        self._lottery_winner_treeview.column("Lottery Winner?", width=100, minwidth=100) # Is the customer a lottery winner
+
+        self._lottery_winner_treeview.heading("#0", text="Name")  # Heading for column zero, which will read the name of the lottery winners
+        self._lottery_winner_treeview.heading("ID", text="ID") # ID heading
+        self._lottery_winner_treeview.heading("Basket", text="Basket", anchor="w") # Basket Heading
+        self._lottery_winner_treeview.heading("Lottery Winner?", text="Lottery Winner?", anchor="w") # Lottery Winner? heading
+
+        self._lottery_winner_ids = [] #list here will store all the IDS of customers who are currently in the lottery winners treeview
+        self.lottery_winner_treeview_ids = 0 # Number will be an incremented whenever items are added to the lottery winner treeview
+
+        
+        #Code below will be an frame that will store the checkout lines in the simulation
+        self._lines_frame = tkinter.Frame(self._mainframe,highlightbackground="red", highlightthickness=2)
+        self._lines_frame.grid(row=1, column=0, sticky="nswe", columnspan=2)
+        
+        #Code below will be of an label showing how many lanes there are currently in the simulation
+        self._self_checkout_lanes_count_gui = [i for i in self._simulation.events.all_lanes.lanes.values() if i.type == "Self_Checkout"]
+        self._regular_lane_count_gui = [i for i in self._simulation.events.all_lanes.lanes.values() if i.type == "Regular Lane"]
+
+        self._total_lanes_label = tkinter.Label(self._lines_frame, text=f"Current Amount of Self Checkout Lanes: {len(self._self_checkout_lanes_count_gui)}   Current Amount of Regular Lanes: {len(self._regular_lane_count_gui)}")
+        self._total_lanes_label.pack()
+
+        #Code below will be of the listbox that will contain lane instances, and the content they contain
+        self._Listboxall_lanes = tkinter.Listbox(self._lines_frame, width=65) # set a listbox that will contain all the lanes in the simulation
+        self._Listboxall_lanes.pack() # pack that listbox in the frame
+
+        #This will assign all lanes that are currently in the simulation to the listbox
+        for i in self._simulation.events.all_lanes.lanes.values(): # For all Lanes
+             self._Listboxall_lanes.insert(tkinter.END, i) # Insert the lane instance into the listbox
+
+        #Code below will show all customers who are currently in lanes
+        self._customers_in_lanes_label = tkinter.Label(self._lines_frame, text=f"Current Number of Customers in lane: {sum(i.lane_lenght + i.stall_lenght for i in self._simulation.events.all_lanes.lanes.values())}")
+        self._customers_in_lanes_label.pack()
+
+        #Code below will create a frame that will contain a listbox containing all customers which are currently in the simulation
+        self._customers_in_simulation_frame = tkinter.Frame(self._mainframe, highlightbackground="green", highlightthickness=2) # Creates the frame that will contain the customer listbox, as well as associated widgets
+        self._customers_in_simulation_frame.grid(row=2, column=0, sticky="nswe", columnspan=2)
+
+        #Code below will be for an label that will show the current count of customers in the simulation
+        self._customer_count_label = tkinter.Label(self._customers_in_simulation_frame, text=f"Current Amount of Customers in simulation: {len(self._simulation.events.all_customers.all_customers_ids)}")
+        self._customer_count_label.pack()
+        
+        #Code below will contain the all customers in simulation treeview
+        self._all_customers_treeview = ttk.Treeview(self._customers_in_simulation_frame) # Creats a treeview which will contain customers currently in the simulation
+        self._all_customers_treeview.pack() # packs the treeview into the frame
+
+        #Code below will create and format the columns for the treeview 
+        self._all_customers_treeview['columns'] = ["Name", "ID", "Basket", "Self Checkout Time(s)", "Regular Checkout Time(s)"] # sets the columns that the all customers in simulation will contain 
+        self._all_customers_treeview.column("#0", width=0)
+        self._all_customers_treeview.column("Name", width=50, minwidth=40)
+        self._all_customers_treeview.column("ID", width=40, minwidth=20 )
+        self._all_customers_treeview.column("Basket", width=50, minwidth=42)
+        self._all_customers_treeview.column("Self Checkout Time(s)", width=123, minwidth=123)
+        self._all_customers_treeview.column("Regular Checkout Time(s)", width=143, minwidth=140)
+
+
+        #Code below will create the headings for each column
+        self._all_customers_treeview.heading("#0", text="")
+        self._all_customers_treeview.heading("Name", text="Name", anchor="w")
+        self._all_customers_treeview.heading("ID", text="ID")
+        self._all_customers_treeview.heading("Basket", text="Basket", anchor="w")
+        self._all_customers_treeview.heading("Self Checkout Time(s)", text="Self Checkout Time(s)" , anchor="w")
+        self._all_customers_treeview.heading("Regular Checkout Time(s)", text="Regular Checkout Time(s)" , anchor="w")
+
+        #Code below will be of an counter showing how many customers have left the simulation
+        self._all_customers_checked_out_counter = tkinter.Label(self._customers_in_simulation_frame, text=f"Customers who have left the simulation: {self._simulation.events.customers_who_have_checked_out}")
+        self._all_customers_checked_out_counter.pack()
+        
+        #Code below will count the IDs of the customer instances which will be added to the treeview
+        self._treeview_id_count = 0
+
+
+
+
+# When START button is pressed, the simulation start will appear, putting main simulation method into a separate thread, and will  then jump to the main simulation hoste
+    def __simulation_start(self):
+            if self._simulation.simulation_started == False:
+                self._gui_update_termination_flag = False
+                self._simulation.end_simulation = False # convert the end_simulation flag from True to False, so that to avoid accidental closure of the program
+                self._simulation_thread = threading.Thread(target=self._simulation.simulation_start, daemon=True) # Assign a separate thread to self.simulation method. Daemon being True means the thread will terminate once the main loop terminates
+                self._thread_for_gui_updating = threading.Thread(target=self.__gui_constant_updating, daemon=True) # Assigns a separate thread to self.gui_constant_updating(), to separate the gui updating process from the window processing 
+                self._simulation_thread.start() # Run the Simulation
+                self._thread_for_gui_updating.start() # Runs the thread for continuous gui updates
+                return # Return to GUI
+            return "Simulation has already started" #Return this string showing that the simulation has already started
+
+
+
+    #When Stop Button is pressed, self.end+simulation will be assigned a True value, which will be checked in the simulation loop on the separate thread. If the end_simulation variable is true, the simulation will terminate
+    def __simulation_end(self):
+        if self._simulation.end_simulation == False:  # if the end simulation flag has been raised
+            self._simulation.end_simulation = True
+            self._gui_update_termination_flag = True
+            return
+        return "Cannot stop simulation"
+    
+
+    #When Exit button is pressed, the window will be closed with the use of destroy(self.master) function
+    def __exit_window(self):
+        self._simulation.end_simulationend_simulation = True
+        self._gui_update_termination_flag = True
+        self._window.destroy()
+
+
+
+
+
+
+
+
+
+
+    #Method below will continually update GUI information 
+    def __gui_constant_updating(self):
+            self.__treeview_customer_ids = [] # array here will store all  ids of customer instances appended to the all customers treeview
+                # Console_Print Method will print Results of Simulation onto the Console, such as a timer and lane results
+            def Current_Time_Format(time): 
+                #THIS BLOCK OF CODE HAS BEEN APPROPRIATED AND BUILD UPON WITH THE HELP OF CHAT GPT
+                self.mins, self.secs = divmod(time, 60)
+                self.hours, self.mins = divmod(self.mins, 60)
+                self.console_print_timer = "Current Time: {:02}:{:02}:{:02} ".format(int(self.hours), int(self.mins), int(self.secs))
+
+                return self.console_print_timer
+
+            #Code below will be of an method used for the updating of labels and listboxes during the simulation
+            def update_Simulation(time): # This method will update the time shown on the Simulation of the simulation
+                self._current_time_label.config(text=time) # configure the current time label of the Simulation, so it shows the result of Con
+                self._customer_count_label.config(text=f"Current Amount of Customers in simulation: {len(self._simulation.events.all_customers.all_customers_ids)}")
+                self._all_customers_checked_out_counter.config(text=f"Customers who have left the simulation: {self._simulation.events.customers_who_have_checked_out}")
+                self._customers_in_lanes_label.config(text=f"Current Number of Customers in lane: {sum(i.lane_lenght + i.stall_lenght for i in self._simulation.events.all_lanes.lanes.values())}")
+                #Code below will update the Listbox that shows all customers that are part of the simulation
+                index_count = 0 # count needed for the for loop indexes
+                for i in self._simulation.events.all_lanes.lanes.values(): # for all lanes in the simulation
+                    self._Listboxall_lanes.delete(index_count) # delete the item at the index from the listbox
+                    self._Listboxall_lanes.insert(index_count, i)# place the selected lane in the index spot an element was just deleted
+                    index_count += 1 # increment the index count by one
+                return
+            
+            #Code below will add customers to the all customers treeview
+            def add_customer_to_treeview():
+                for i in self._simulation.events.all_lanes.lanes.values():# for all lanes
+                    for j in i.stall: # for all stalls
+                            if j.id not in self.__treeview_customer_ids: # if customer's ID not in the ID array
+                                self.__treeview_customer_ids.append(j.id)
+                                self._all_customers_treeview.insert(parent='', index='end', iid=self._treeview_id_count, text="", values=(j.name, j.id, j.Basket, j.checkout_time(6), j.checkout_time(4)))
+                                self._treeview_id_count += 1 # increment the treeview ID count
+                    for k in i.lane: # for all lanes
+                        if k.id not in self.__treeview_customer_ids:  # if customer not already in ID array
+                            self.__treeview_customer_ids.append(k.id) # append customer ID to array
+                            self._all_customers_treeview.insert(parent='', index='end', iid=self._treeview_id_count, text="", values=(k.name, k.id, k.Basket, k.checkout_time(6), k.checkout_time(4))) # append customer instance information
+                            self._treeview_id_count += 1 # increment the treeview ID count
+
+            #Code below will be of an method which will delete customers from the treeview who have already checked out
+            def delete_customer_from_treeview():
+                for i in self._all_customers_treeview.get_children(): # for all items in the treeview
+                    _treeview_customer_id = self._all_customers_treeview.item(i, 'values')[1]
+                    if _treeview_customer_id not in self._simulation.events.all_customers.all_customers_ids: # if the customer id of the item is not currently part of the all customer ID's
+                        self._all_customers_treeview.delete(i) # delete that item from the treeview
+                        
+            #Code below will add customers who have won the lottery to the lottery winner table
+            def add_lottery_winners_to_treeview():
+                for i in self._simulation.events.all_customers.lottery_winners:
+                    if i.id not in self._lottery_winner_ids:
+                        self._lottery_winner_ids.append(i.id)
+                        self._lottery_winner_treeview.insert(parent='', index='end', iid=self.lottery_winner_treeview_ids, text=i.name, values=(i.id, i.Basket, i.lottery_winner))
+                        self.lottery_winner_treeview_ids += 1
+                return
+            
+            #Code below will clear all GUI widgets of the content they contain. It will be triggered after the simulation is stopped
+            def clear_gui_widgets():
+                for i in self._all_customers_treeview.get_children(): # for all items of the all customers treeview
+                    self._all_customers_treeview.delete(i) # delete it from the treeview
+                for i in self._lottery_winner_treeview.get_children(): # for all items in the lottery winners treeview
+                    self._lottery_winner_treeview.delete(i) # delete the items from the treeview
+
+            clear_gui_widgets() # clear information on all widgets present in the gui
+            while True: # While the loop is not broken 
+                update_Simulation(Current_Time_Format(self._simulation.elapsed_time)) # This line will convert simulation elapsed time to a current time format
+                add_customer_to_treeview() # this method will add customers to the customer treeview
+                delete_customer_from_treeview() # this method will delete customers who have checked out from the treeview
+                add_lottery_winners_to_treeview() # this method will add customers who have won the lottery to the lottery winner treeview
+                if self._gui_update_termination_flag == True: # if the termination flag is set
+                    break # break the loop and break the thread
+                time.sleep(1) # pauses the simulation of the while loop for one second to deal with resource allocation with other concurring methods
+            return # return
+
+
+
+
+mw = tkinter.Tk()
+
+
+simulation = GUI(mw) # initialises a Simulation instance, with a being an events instance parameter, and mw being a tkinter.Tk() window instance 
+
+mw.mainloop()# start a main loop of the tkinter.Tk() window, and starts the Simulation Class instance 
+
