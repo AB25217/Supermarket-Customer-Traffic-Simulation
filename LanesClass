@@ -1,0 +1,351 @@
+"""Author: Aleksandar Bozov
+Purpose: Lane Classes used in the simulation will be created here"""
+
+from CustomerClass import Customer
+import time
+
+class Lane: # Abstract Class for Lanes  
+    """
+    Purpose: An Abstract class which will be used as an template for the development of additional types of lanes. It hosts types of attributes and methods which will be used in the developmnent of other methods
+
+    Parameters:
+
+        status: is the lane open or closed? acceptable strings are only "open" or "closed"
+        always_open: If the lane is supposed to be always open?
+        type: what is the lane type
+        lane_capacity: what is the maximum capacity of the waiting lane for the lane
+        stall_capacity: what is the maximum capacity for the stalls of the lane
+    
+    Attributes:
+        status = what is the status of the lane. 
+        type = The type of lane 
+        self.lane = a array that will hold customer instances waiting
+        self._lane_capacity =  how many customer instances can be in the lane array
+        self.stall = an array that will hold customer instrances checking out
+        self.lane_lenght = how long is the waiting line 
+        self.stall_lenght = how long is the stall
+
+    Methods:
+        __rerp__() = showcases essential class attributes when invoced
+        move_to_stalls() = a method that will move customers waiting in the waiting lane to stalls if there is enough space
+        estimate_checkout() = estimates the estimated checkout time for customer instances currently in the stalls
+        checkout() = deletes customer instances from stalls if their estimated_checkout_time has passed
+    """
+
+
+    def __init__(self, status, always_open, type=None, lane_capacity=None,stall_capacity=None, lane_checkout_time=None): # User defined parameters: status, defined. Predefined Parameters: Lane_capacity, stall_capacity
+        if status.lower() in ["open", "closed"]: # If user entered status parameter contains string values "Open" or "Closed"
+            self._status = status
+        else: 
+            raise ValueError("Status Parameter value cannot be accepetd. Please type Open or Closed")
+        self._type = type # Type of lane. Either "Self Checkout" or "Regular Lane"
+
+        if isinstance(always_open, bool): 
+            self._always_open = always_open
+        else:
+            raise ValueError("Please enter a boolean value")
+        
+        self._lane_checkout_time = lane_checkout_time # variable will hold information the checkout time for this specific lane 
+        self.lane = [] # a list representing a waiting lane will be stored in lane. Customer instances waiting for stall places will be stored there and will represent waiting lanes
+        self._lane_capacity = lane_capacity # Pre defined lane_capacity. Will be used in methods to determine if lane is full 
+        self.stall = [] # a list representing stalls of the lane. Customers will join if spaces are open and perform checkout operations
+        self._stall_capacity = stall_capacity  # Predefined stall capacity, used in future calculations to determine if spaces in stalls exist
+        self.lane_lenght = len(self.lane) # lenght of lane stored in lane_lenght 
+        self.stall_lenght = len(self.stall) # lenght of stall stored in stall_lenght. Represents how many customers are performing checkout
+        self._timestamp_when_created = time.time() # will record when the lane was initialised with a system timestamp
+    
+    
+    def __repr__(self): # Rerp method, returning class attributes
+        return (f"Type: {self._type} \n"
+                f"Status: {self._status} \n"
+                f"Lane Size: {self.lane_lenght} \n"
+                f"Stall Size: {self.stall_lenght} \n"
+                f"Lane: " + str(self.lane_lenght * "*"))
+    
+
+    #Below code is an method which will move customers from the lane class(lane array) to the stalls (stall array)
+    def move_to_stalls(self): # Will move customers from waiting lane to stall
+        if self.lane_lenght > 0:  # Check if waiting line for lane is not empty
+            while self.stall_lenght < self._stall_capacity and self.lane_lenght > 0:
+                # Check if there's space in the stall and the waiting lane is not empty
+                customer = self.lane.pop(0)  # Remove and get the first customer from the lane
+                self.stall.append(customer)  # Append the customer to the stall
+                self.lane_lenght -= 1  # Decrement lane length attribute by one
+                self.stall_lenght += 1  # Increment stall length by one
+                return False
+            return True  # If stalls are at capacity and waiting lane is empty, return True
+        return False  # If waiting lane has no customers, return False
+
+
+    def checkout(self):
+        """
+        Method that will check out customers who their estimated time is under the current time, which means that they have completed their purchase
+        """
+        self.ids_of_checked_out_customers = []
+        for j in self.stall: # For Each customer in that lane's stall
+            if j.estimated_checkout_time <= (time.time()): # If their checkout time is over the time right now
+                self.remove_customer(j) # delete their customer instance from the stall
+                self.ids_of_checked_out_customers.append(j.id) # append the id of the customer who checked out to the list of customers who have checked out
+        return self.ids_of_checked_out_customers
+    
+
+    #Code below will be remove customer method, where customers from either the stalls or the waiting lane will be removed when specified
+    def remove_customer(self, customer):
+        """
+        Parameters:
+
+        Customer: The Customer which will be removed
+                Valid entries include Customer Instances 
+
+        Purpose: Will Remove Customer Instance from Stall or Waiting Lane Lane, and will update lane and stall lenght  
+        
+        """
+        if isinstance(customer, Customer): # if the customer parameter is an instance of the Customer Class
+                if customer in self.stall: #  if the type parameter is the string "stalls"
+                    self.stall.remove(customer) # Remove Customer Instance from the stall list
+                    self.stall_lenght -= 1 # Decrement the stalls lenght
+                    return "Customer Removed From Stalls"
+                
+                if customer in self.lane: # If the parameter type is lane
+                    self.lane.remove(customer) # remove customer instance from lane 
+                    self.lane_lenght -= 1 # Decrement the lane lenght attribute
+                    return "Customer Removed from Lane"
+                return "Customer was not removed from lane or stall, as customer instance was not found "
+        raise ValueError("Customer input not a Customer Class Instance") # If customer parameter not a Customer Class instance, raise value error
+
+
+    def add_customer(self):
+        pass
+
+    def estimate_checkout(self):
+        pass
+
+
+
+class RegularLane(Lane):
+    """
+    Purpose: A Regular Lane class derived from the abstract Lane Class. shares everything except their stall and line capacity is limited to 1 and 5 respectively
+            This class also has a add_customer method, that add customers to their lane 
+
+    Parameters:
+
+        status: is the lane open or closed? acceptable strings are only "open" or "closed"
+        always_open: If the lane is supposed to be always open?
+        type: what is the lane type
+        lane_capacity: what is the maximum capacity of the waiting lane for the lane
+        stall_capacity: what is the maximum capacity for the stalls of the lane
+    
+    Attributes:
+        status = what is the status of the lane. 
+        type = The type of lane 
+        self.lane = a array that will hold customer instances waiting
+        self._lane_capacity =  how many customer instances can be in the lane array
+        self.stall = an array that will hold customer instrances checking out
+        self.lane_lenght = how long is the waiting line 
+        self.stall_lenght = how long is the stall
+
+    Methods:
+        __rerp__() = showcases essential class attributes when invoced
+        move_to_stalls() = a method that will move customers waiting in the waiting lane to stalls if there is enough space
+        estimate_checkout() = estimates the estimated checkout time for customer instances currently in the stalls
+        checkout() = deletes customer instances from stalls if their estimated_checkout_time has passed
+        add_customr() = will add customers who have
+    """
+    def __init__(self, status, always_open, type="Regular Lane", lane_capacity=5, stall_capacity=1, lane_checkout_time=4):
+        super().__init__(status, always_open, type, lane_capacity, stall_capacity, lane_checkout_time)
+
+    def __repr__(self):
+        return super().__repr__()
+    
+    
+    def add_customer(self, customer):# add customer method with customer instance as parameter
+        if isinstance(customer, Customer): # if customer parameter is an insatnce of Customer Class
+            if self.lane_lenght < self.lane_capacity and self.status.lower() in ["open"]: # And if the lane lenght of Regular lane isntance is lower than its predefined capacit
+                                                                                        # And the status of the lane equals open
+                self.lane.append(customer) # Append  customer instance to self.lane list of regular lane instance
+                self.lane_lenght += 1 # Append Lane Lenght attribute by one 
+                return True# Return
+            return "Customer Cannot Join Lane"
+        raise ValueError("Customer Paremeter is NOT an instance. Try again") # If Customer Parameter not an instance, raise an Value Error stating as much
+    
+    
+    
+    
+    def move_to_stalls(self):
+        return super().move_to_stalls()
+
+    def estimate_checkout(self): # Checkout Method is performed here for each customer of lane stalls
+                    for i in self.stall: # for all customers in the stalls of the lane
+                        if i.estimated_checkout_time == 0: # If they do not have  an enstimated checkout time
+                            i.estimated_checkout_time =  time.time() + float(i.checkout_time(self._lane_checkout_time)) # Assign one to them by using Customer Class regular lane checkout + the current time
+
+
+    def remove_customer(self, customer):
+        return super().remove_customer(customer)
+    
+    def checkout(self):
+        return super().checkout()
+
+
+    #Getter Method for always open
+    @property 
+    def always_open(self):
+        """Getter Method"""
+        return self._always_open
+    
+    #Setter Method for always open
+    @always_open.setter
+    def always_open(self, value):
+        if not isinstance(value, bool) or self._always_open == value:
+            raise ValueError("Value error. Please make sure input value is boolean and different from the one already in place")
+        self._always_open = value
+
+    #Getter method for lane_capacity
+    @property 
+    def lane_capacity(self):
+        """Getter Method"""
+        return self._lane_capacity
+    #Getter Method for stall_capacity
+    @property 
+    def stall_capacity(self):
+        """Getter Method"""
+        return self._stall_capacity
+        
+    #Getter Method for lane type
+    @property 
+    def type(self):
+        """Getter Method"""
+        return self._type
+        
+    #Getter Method for status
+    @property 
+    def status(self):
+        """Getter Method"""
+        return self._status
+        
+    #Setter Method for Status 
+    @status.setter
+    def status(self, value):
+        """Setter Method"""
+        if value.lower() in ["open", "closed"]: # If user entered status parameter contains string values "Open" or "Closed"
+            self._status = value
+        else:
+            raise ValueError("value entererd not open or closed. Try again")
+
+
+
+
+
+
+
+class SelfCheckout(Lane): # Self Checkout Lane class representing self checkout lanes in simulation
+    """
+    Purpose: A Self Checkout Lane class derived from the abstract Lane Class. shares everything except their stall and line capacity is limited to 8 and 15 respectively
+            This class also has a add_customer method, that add customers to their lane IF they have a basket size below 10
+
+    Parameters:
+
+        status: is the lane open or closed? acceptable strings are only "open" or "closed"
+        always_open: If the lane is supposed to be always open?
+        type: what is the lane type
+        lane_capacity: what is the maximum capacity of the waiting lane for the lane
+        stall_capacity: what is the maximum capacity for the stalls of the lane
+    
+    Attributes:
+        status = what is the status of the lane. 
+        type = The type of lane 
+        self.lane = a array that will hold customer instances waiting
+        self._lane_capacity =  how many customer instances can be in the lane array
+        self.stall = an array that will hold customer instrances checking out
+        self.lane_lenght = how long is the waiting line 
+        self.stall_lenght = how long is the stall
+
+    Methods:
+        __rerp__() = showcases essential class attributes when invoced
+        move_to_stalls() = a method that will move customers waiting in the waiting lane to stalls if there is enough space
+        estimate_checkout() = estimates the estimated checkout time for customer instances currently in the stalls
+        checkout() = deletes customer instances from stalls if their estimated_checkout_time has passed
+        add_customr() = will add customers who have
+    """
+    def __init__(self, status, always_open, type="Self_Checkout", lane_capacity=15, stall_capacity=8, lane_checkout_time=6):
+        super().__init__(status, always_open, type, lane_capacity, stall_capacity, lane_checkout_time)
+    
+    def __repr__(self):
+        return super().__repr__()
+
+    def add_customer(self, customer): # Adds a customer to lane. customer parameter should be class instance
+        if isinstance(customer, Customer): # Checks if customer Parameter is an Customer Class Instance
+            if (customer.Basket < 10) and (self.lane_capacity > self.lane_lenght) and (self.status.lower() in ["open"]): # If customer instance's basket size contains less than 10 items, lane lenght is below its capacity and the status of the lane is open
+                self.lane.append(customer) # Append Customer Instance to lane list
+                self.lane_lenght += 1 # Increment lane lenght attribute
+                return True# return
+            return "Customer cannot join lane" # If Customer cannot join lane, return with this string
+        raise ValueError(" Customer instance entered is NOT an Customer Instance") # If customer parameter is not an instance, raise value error stating as much
+
+    def move_to_stalls(self):
+        return super().move_to_stalls()
+
+    #If the customer is part of a self checkout lane, same is done except regular lane calculations are replaced with Self_Checkout Customer estimations
+    def estimate_checkout(self): # Checkout Method is performed here for each customer of lane stalls   
+                for i in self.stall: # For all Customers in stalls
+                    if i.estimated_checkout_time == 0: # If they do not have an assigned checkout time
+                        i.estimated_checkout_time = time.time() + float(i.checkout_time(self._lane_checkout_time)) # Assign One to them by using Customer Class Self Checkout Time method + the current time of the program
+
+                return "Finished"
+    
+    def remove_customer(self, customer):
+        return super().remove_customer(customer)
+    
+    def checkout(self):
+        return super().checkout()
+    
+
+
+    #Getter Method for always open
+    @property 
+    def always_open(self):
+        """Getter Method"""
+        return self._always_open
+    
+    #Setter Method for always open
+    @always_open.setter
+    def always_open(self, value):
+        if not isinstance(value, bool) or self._always_open == value:
+            raise ValueError("Value error. Please make sure input value is boolean and different from the one already in place")
+        self._always_open = value
+
+    #Getter method for lane_capacity
+    @property 
+    def lane_capacity(self):
+        """Getter Method"""
+        return self._lane_capacity
+    
+    #Getter Method for stall_capacity
+    @property 
+    def stall_capacity(self):
+        """Getter Method"""
+        return self._stall_capacity
+           
+    #Getter Method for lane type
+    @property 
+    def type(self):
+        """Getter Method"""
+        return self._type
+        
+    #Getter Method for status
+    @property 
+    def status(self):
+        """Getter Method"""
+        return self._status
+        
+    #Setter Method for Status 
+    @status.setter
+    def status(self, value):
+        """Setter Method"""
+        if value.lower() in ["open", "closed"]: # If user entered status parameter contains string values "Open" or "Closed"
+            self._status = value
+        else:
+            raise ValueError("value entererd not open or closed. Try again")
+
+
+
