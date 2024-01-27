@@ -1,0 +1,136 @@
+"""Author: Peter Yovchev
+Purpose: Customer Class representing customers in the simulation"""
+import random 
+
+class AbstractCustomer:
+    """
+    Am Abstract class that will be used as a base class for other classes of customers
+    """
+    def __init__(self, name=None, id=None, Basket=None): # Customer class parameters being name of customer and an ID, and basket size
+        self._name = name 
+        if not isinstance(id, bool) and not isinstance(id, float):
+            self._id = id
+        else:
+            raise ValueError("ID should NOT be boolean or fleat. Please try again")
+        self._basket = Basket # assign the basket parameter to _basket variable
+        self._lottery_winner =  False
+        self._estimated_checkout_time = 0 # Estimated Checkout time, used to determine lenght of checkout for customers
+
+    def checkout_time(self, time):
+        """
+        A method that will calculate the checkout time of a customer based on their basket contents and the time for checkout per item in seconds
+
+        Part of the Customer Class
+
+        Parameters: time
+            time: The time spent per item during the checkout. Must be a integer and supposed to represent seconds
+
+        Return: Self.Basket * time
+        """
+        if isinstance(time, int) and time > 0: #if time is integer and greater than zero
+            return self.Basket * time # returns time spent for checkout per item in seconds
+        raise ValueError("time parameter entered is not a integer or it is not greater than zero")
+    
+    def __repr__(self) -> str:
+        pass
+
+class Customer(AbstractCustomer): # Customer Class 
+
+    """"
+    Description: Customer Class which will represent customers in the simulation. Each instance of this class will represent a customer, and that instance will hold ID, name and basket size data. 
+
+    Parameters: name, id
+        name: first and last name of the customer instance
+        id: what is the unique identifier of the customer instance class
+
+    Attributes: name, id, Basket, lottery_winner, estimated_checkout_time, is_in_treeview
+
+        name: First and last name of the customer instance
+        id: the ID of the customer instance
+        Basket: What is the basket size that the customer instance is carrying. It is a randomly chosen number between 1 and 30
+        lottery_winner: whether Customer is a lottery winner. Boolean value
+        estimated_checkout_time: what is the estimated checkout time for the customer instance to complete checkout, depending on their basket size and lane checkout time. integer value
+        is_in_treeview: Will check if the customer instance is already in the treeview. if it is not, then it will be added. If it is, then it will passed over during the simulation. It is a boolean data type
+        
+    Methods: is_lottery_winner, self_checkout_time, regular_lane_checkout, display_details
+
+        is_lottery_winner: Will determine whether customer is a lottery winner or not depending on if their basket size is above size 10, and depending on luck. Result will be stored in is_lottery_winner attribute
+        self_checkout_time: Returns the self lane checkout time by multiplying the basket size by 6. Returns the result
+        regular_lane_checkout: Returns the regular lane checkout time by multiplying the basket size by 4. Returns the result
+        display_details: will print out key attributes of the customer instance in the console
+
+        
+    """
+    # inherits attributes from AbstractCustomer Class
+    def __init__(self, name=None, id=None, Basket=None):
+        super().__init__(name, id, Basket)
+        self._basket = random.randint(1, 30)
+
+
+
+    #Code below is of an method that will find out whether a customer has won the lottery or not
+    def is_lottery_winner(self, lottery_winning_chance=10, winning_number=5):
+        if lottery_winning_chance >= 0 and winning_number >= 0:
+            if winning_number <= lottery_winning_chance: # checks if winning number is in range of the lottery winning change
+                if self._lottery_winner == False: #If they have not won the lottery already
+                    if (self._basket >= 10): #If basket size has above 10 items
+                        if random.randint(1, lottery_winning_chance) == winning_number: # If a random number selected by the customer is equal to the winning number, they have won the lottery
+                            self._lottery_winner = True #The customer has won the lottery
+                            return True # Return value True to self.lottery_winner
+                        self._lottery_winner == False
+                        return False # If not true, return booelan value false
+                    self._lottery_winner == False # The customer did not win the lottery
+                    return False # If basket has less than 10 items, return with this boolean value
+                elif self._lottery_winner == True: # If the customer has already won the lottery
+                    return " Customer is already a lottery winner, no need to draw another ticket for them"
+            else:
+                raise ValueError("Winning number is not in range of possible numbers customer could aquire. Try Again") 
+        raise ValueError("Please enter parameters that are not negative")
+    
+
+    #inherits checkout time method
+    def checkout_time(self, time):
+        return super().checkout_time(time)
+    
+
+    def __repr__(self): # representation method showing important attributes of Customer Instance
+        return (f"Name: {self.name} \n"
+                f"ID: {self.id} \n"
+                f"Basket Size: {self.Basket} \n"
+                f"Self Checkout Time (s): {self.checkout_time(6)} \n"
+                f"Regular Lane Checkout Time (s): {self.checkout_time(4)} \n" 
+                f"Estimated Checkout Time (s): {self.estimated_checkout_time} \n"
+                f"Lottery Winner?: {self._lottery_winner}\n")
+    
+    @property
+    def estimated_checkout_time(self):
+        """Getter Method"""
+        return self._estimated_checkout_time
+
+    @estimated_checkout_time.setter
+    def estimated_checkout_time(self, time):
+        """Setter Method"""
+        if time < 0:
+            raise ValueError("Value must be non-zero and positive")
+        self._estimated_checkout_time = time
+
+    @property
+    def Basket(self):
+        """Getter Method"""
+        return self._basket
+
+    @property
+    def id(self):
+        """Getter Method"""
+        return self._id
+
+    @property
+    def name(self):
+        """Getter Method"""
+        return self._name
+    
+    @property 
+    def lottery_winner(self):
+        """Getter Method"""
+        return self._lottery_winner
+
