@@ -1,0 +1,62 @@
+from CustomerClass import Customer
+import random
+"""Author: Peter Yovchev
+Purpose: To store all customer classes in an centralised class for better management 
+"""
+
+class AllCustomer: # All Customer Class, containing all customers for the simulation, with method to generate random amount of customers
+    """
+    Description: A All Customers Lane which will contain all customers who are currently in the simulation
+
+    Attributes:
+        all_customers = an array that contains all customers that have been recently generated or have not found a lane yet
+        lottery_winners = an array that contains customer instances who have won the lottery shortly after being generated
+        total_amount_of_customers = the total amount of customers currently in the simulation, as an integer
+        all_customer_ids = the unique identifiers of all customer instances that have been generated
+    
+    Methods:
+        generate_customer(number_of_customers) = a method that will generate a number of customers based on a parameter provided, and store them in the all_customers_array
+    """
+    def __init__(self):
+        self.all_customers = [] # List will contain all customers not in lane or stall. Generated Customers will also be appened here
+        self._customer_names = [ # A list of customer names which will be used in the generation of customers
+                "Alice",
+                "Bob",
+                "Charlie",
+                "David",
+                "Eva",
+                "Frank",
+                "Grace",
+                "Hank",
+                "Ivy",
+                "Jack",
+                "Karen",
+                "Liam",
+                "Mia",
+                "Noah",
+                "Olivia",
+        ]
+        self._next_customer_id = 1 # next customer ID for generated Customer
+        self.lottery_winners = [] # Will store all customers who have won the lottery
+        self.total_amount_of_customers = 0 # this will be the total ammount of customers in the entire simulations
+        self.all_customers_ids = [] # This list will contain the customer ID's of all customers who are currently in the simulation
+
+    #This method will generate a random number of customers between the numbers 1 and 10, assign them with random names, a sequential ID and append them to the all_customers array
+    def generate_customers(self, number_of_customers):  #Method will generate a random number of customers between 1 to 9, and then will store instances of the customer class into all_customers list
+        if isinstance(number_of_customers, int) and number_of_customers > 0:
+            for i in range(number_of_customers): # for the random number of customers
+                self.generated_customer = Customer(self._customer_names[random.randint(0, len(self._customer_names) - 1)], "C" + str(self._next_customer_id)) # ID parameter being self._next_id_number + "C" character With the name parameter being a name randomly chosen from names list, and the ID
+                self.all_customers.append(self.generated_customer) # append to allcustomer list Customer Instance                                                                                                            
+            
+                self.all_customers_ids.append(self.generated_customer.id) # appends the id of the customer in the customer id array
+
+                if self.generated_customer.is_lottery_winner() == True: # If the generated customer is a lottery winner
+                    self.lottery_winners.append(self.generated_customer) # append that customer instance to the lottery winner list
+                
+                self._next_customer_id += 1 # Increment next customer ID by one, as this customer ID has been already taken
+            return "Customers Generated" # When For loop finishes, return with string "Customer Generated"
+        else:
+            raise ValueError("Please enter number of customers for the simulation that is non negative and a integer")
+
+    
+
