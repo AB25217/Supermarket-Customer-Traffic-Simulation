@@ -1,0 +1,144 @@
+from LanesClass import SelfCheckout
+from LanesClass import RegularLane
+from CustomerClass import Customer
+"""Author: Aleksandar Bozov
+Purpose: Grouping all lanes for simulation together for easier management 
+"""
+
+class AllLanes:
+    """
+    Description: AllLanes is a class that contains all lanes which are currently in the simulation
+
+    Attributes:
+        self.lanes = a dictionary that contains the ids of each lane as keys, and each lane as values
+
+    Methods:
+        generate_lane(number_of_self_checkout_lanes, number_of_regular_lanes, self_checkout_lanes_open, regular_lanes_open): will generate lanes for the simulation based on the parameters provided. They will be stored in the all_lanes dictionary
+
+        add_to_lane(customer) = adds a customer instance to a lane
+
+        lane_regulation() = opens and closes lanes depending on customer traffic
+
+        checkout_times() # calculates checkout times for customers in lane stalls
+
+        checkout() # removes customer from lanes who have already completed their checkout
+
+    """
+    def __init__(self, number_of_self_checkout_lanes, number_of_regular_lanes, self_checkout_lanes_open, regular_lanes_open) -> None:
+        self.lanes = { # This Dictionary will contain names of each lane, along with class instances of the type of lane
+        }
+        self._lane_dic_id = 1 # lane dic id will be used to assign each lane an unique value for their dictionary
+        self.__generate_lane(number_of_self_checkout_lanes, number_of_regular_lanes, self_checkout_lanes_open, regular_lanes_open)
+
+    #Code below is of a private method that will generate lanes as specified. It should be only used during the initialisation of AllLanes
+    def __generate_lane(self, number_of_self_checkout_lanes, number_of_regular_lanes, self_checkout_lanes_open, regular_lanes_open):
+        """
+        A method that will generate lanes and types of lanes by the parameters provided, and will append them to the lanes_dictionary
+        
+        Potential lanes are hard limited to 5 for self_checkout lanes and 15 regular lanes respectively
+
+        Parameters:
+            number_of_self_checkout_lanes (int): Specify how many self checkout lanes should be generated
+            number_of_regular_lanes (int): Specify how many regular_lanes should be generated
+            self_checkout_lanes_open (int): specify how many self checkout lanes should be always open
+            regular_lanes_open (int): Specify how many Regular Lanes should be always open
+        
+        Returns:
+            generate lanes and appends them to the lanes dictionary. Each lane will be accompanied by a unique identifier as a value in the all
+            lanes dictionary
+
+        Potential Errors:
+            Value Error if parameters entered are not integers,if the lane limit was broken,
+            and if a parameter entered was a negative number
+
+        Example Usage:
+            .generate_lane(5, 5, 1, 1)
+
+
+        """
+        self._test_integer_array = [number_of_self_checkout_lanes, number_of_regular_lanes, self_checkout_lanes_open, regular_lanes_open] # store parameters in an array which will be used to determine if all of them are parameters
+        if all(isinstance(i, int) and i > 0 for i in self._test_integer_array):  # If all elements in the test integer array are actually integers, and are non negative
+            if number_of_regular_lanes < 15 and number_of_self_checkout_lanes < 5: # If self checkout or regular lane parameter have not been set above the hard limit
+                for i in range(number_of_self_checkout_lanes): # for the number of regular lanes specified
+                    if self_checkout_lanes_open > 0: # if the amount of self checkout lanes needed to be open is not zero
+                        self.lanes["L" + str(self._lane_dic_id)] = SelfCheckout("Open", True) # Assign a Self Checkout class instance to the all lanes dictionary, specifying that the lane needs to be always open
+                        self._lane_dic_id += 1 # Increment the lane dic id count
+                        self_checkout_lanes_open -= 1 # decrement the number of self_checkout_lanes that need to be always open
+                    else:
+                        self.lanes["L" + str(self._lane_dic_id)] = SelfCheckout("Closed", False) # Assign a Self Checkout class instance to the all lanes dictionary, specifying that the lane should not be always open
+                        self._lane_dic_id += 1 # Increment the lane dic id count
+                for j in range(number_of_regular_lanes): # for the number of regular lanes specified
+                    if regular_lanes_open > 0: # If the count for regular lanes which need to be opened is not zero
+                        self.lanes["L" + str(self._lane_dic_id)] = RegularLane("Open", True) # Creates a regular lane which will always be open, and appends it to the all lanes dictionary alogn with its own unique identifier value
+                        self._lane_dic_id += 1 # incremnet the id counter
+                        regular_lanes_open -= 1 # decrement the number of regular lanes which need to be always open
+                    else:
+                        self.lanes["L" + str(self._lane_dic_id)] = RegularLane("Closed", False) # Creates a regular lane which will not be always be open, and appends it to the all lanes dictionary alogn with its own unique identifier value
+                        self._lane_dic_id += 1 # Increment the lane dic id count
+                return "Method Complete" # when all lanes have been added, return the method
+            raise ValueError("The amount of lanes is above the allowed limit") # Raise value error informing user
+        raise ValueError("Parameters entered are not integers or are negative. Check Parameters") # It raises a value error
+
+    def add_to_lane(self, customer): #Method Purpose to Add Customers to Lanes
+        self._temp_dict = {}
+        if isinstance(customer, Customer): # If customer parameter is an instance of customer class
+            def _sort_dict(): # A Submethod which will sort all lanes into their keys and their lenght sizes
+                for i in self.lanes: # for all lanes
+                    self._temp_dict[i] = self.lanes[i].lane_lenght # assign the key of the lane and the lane instance's lane lenght to a temp dict as Key and value respectively
+                self._temp_dict = dict(sorted(self._temp_dict.items(), key=lambda item: item[1])) # sort the lane in the simulation based on the lane lenght value of the temporary dict, with the help of an lambda function
+                                                                                                # and then store that dict into the self._temp_dict variable 
+                return # Function Finishes Here
+
+
+            _sort_dict() # Run _Sort_Dict method which is enbedded in add_to_lane method
+            for j in self._temp_dict: # For all Lanes in the temp dictionary
+                if self.lanes[j].add_customer(customer) == True: # If customer can be appended to that lane, based on the criteria of that lane's add_to_lane method
+                        
+                    return True # termine method
+            return False # If customer cannot be appended to an lane, return with False
+        raise ValueError("Please enter a valid parameter that is an instance of Customer class")
+      
+    def __repr__(self): 
+        """
+        Will represent all content which is in the all_lanes dictionary
+        """
+        for i in self.lanes.values():
+            print(repr(i))
+        return 
+    def lane_regulation(self): # Event which will regulate the Status of Lanes
+        for j in self.lanes.values(): # For All Lanes
+            if j.lane_lenght < j.lane_capacity and j.status == "Open" and j.type != "Self_Checkout": # If A Lane has room and is not closed
+                for i in self.lanes.values(): # Check for Every Lane
+                    if i.status ==  "Open" and i.always_open != True and (i.lane_lenght + i.stall_lenght) == 0: # If lane is open and not set to be always open
+                        i.status = "Closed" # Close Lane
+                        return "Lane Closed" # Return
+                return  # Return if lane with possibility to be closed is not found
+        for i in self.lanes.values(): # For all lanes
+            if i.status == "Closed": # If there is an closed lane
+                i.status = "Open" # Open it
+                return # Return
+        return True # If not lane can be oppened, return False 
+                
+    def checkout_times(self): # Calculating Time for Customers
+        for i in self.lanes.values(): # For Each Lane in All Lanes Class
+            i.estimate_checkout() # Calculate the Checkout for All Customers in that lane
+    
+    def checkout(self):
+        """
+        Method will check out all customers whose estimated checkout time is over the limit, and for those who have checked out, will return 
+        an array of their ids
+        """
+        self.ids_of_checked_out_customers = [] # an array that will contain the IDS of all customers who have checked out from the simulation
+        for i in self.lanes.values(): # for all lanes
+            self.ids_of_checked_out_customers += i.checkout() # add all the elements of that lane instance's ids of customers who have checked out
+                                                              #to the all lanes's instance of all customers ids who have checked out
+        return self.ids_of_checked_out_customers
+            
+
+    def move_to_stalls(self): 
+        """Method will move customers in lanes from their waiting lanes to the stalls for checkout, if possible"""
+        for i in self.lanes.values(): # for each lane in All Lanes Class
+            i.move_to_stalls() # Move Customers from waiting line to stall
+    
+        
+
