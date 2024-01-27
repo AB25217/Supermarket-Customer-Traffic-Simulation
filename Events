@@ -1,0 +1,172 @@
+from AllCustomers import AllCustomer
+from AllLanes import AllLanes
+"""
+Author: Aleksandar Bozov and Peter Yovchev
+Purpose: To design simulation events and interactions between customer and lane instances
+"""
+
+
+class Events: # Class with events for all of the simulation  will be here
+    """ 
+    Description: Events class groups AllCustomer and AllLanes class here, to allow for interaction between customeers and lanes
+
+    Attributes:
+        all_lanes  = an instance of the all_lanes class instance
+        all_customer = AllCustomer class instance 
+        customer_who_have-checked_out = will record customer instances who have checked out. This will be primarely used in GUI windows
+    Methods:
+        add_customers_to_lanes = a method that will get customers generated or waiting in the AllCustomer Class, and adding them to lanes in the AllLanes Class
+        
+        generate_customers = a method that will generate customers based on a number parameter set by the user
+
+        move_to_stalls = a method that will move customers instances who are in the waiting lane of lanes, to their stalls, if possible
+
+        lane_regulation = When method triggered, lanes in the AllLanes class will open or close depending on the amount of customer traffic they have
+
+        checkout_and_update = a method that will perform checkout for all customer instances in stalls across all lanes, who have their checkout time met
+        An array of customer Ids will also be returned
+
+        simulation_clearance = a method that will clear all relevant attributes of both the AllCustomer and AllLanes classes in the Events Class. 
+        Usually triggered when a simulaiton is started
+
+        simulation = runs relevant events to the simulation. Designed to be continually iterated over by a while loop to 
+        create the illusion of a real time simulations
+    """
+
+    def __init__(self): 
+        self.all_lanes = AllLanes(1,5,1,1) # All Lanes Class Instance
+        #self.all_lanes.generate_lane(1,5,1,1) # generates 1 self checkout lane and 5 regular lanes. 
+        self.all_customers = AllCustomer() # All Customers Class Instance stored here for simpler management 
+        self.customers_who_have_checked_out = 0 # All customers who have checked out from their lanes
+
+
+    def add_customers_to_lanes(self): # Adding Customers from All Customers Class to All Lanes 
+        for i in self.all_customers.all_customers: # For each customer instance  in all customers class list attribute
+            if sum(i.lane_lenght + i.stall_lenght for i in self.all_lanes.lanes.values()) > 39: # If the total amount of customers currently in the simulation is 40 or above
+                print("LANE SATURATION") # Print Lane Saturation in the console
+                return # return
+            elif self.all_lanes.add_to_lane(i) == True: # Try to add the customer to a lane. If they have been appended to a lane,
+                self.all_customers.all_customers.remove(i)
+            else: 
+                if self.all_lanes.lane_regulation()== False: # Try to open new lanes. If Not new Lanes could be oppened
+                    return print("Lane Saturation") # Return a print of Lane Saturation
+
+
+
+    def generate_customers(self, amount_of_customers): # Method for Generatign Customers
+        self.all_customers.generate_customers(amount_of_customers) # run generate customers method from All Customer Class
+        return # Return when finished
+
+
+
+    def move_to_stalls(self): #  Moving Customers from lanes to stalls 
+        self.all_lanes.move_to_stalls()
+        return
+    
+
+    def lane_regulation(self): # Method will perform lane regulations in the simulation
+        return self.all_lanes.lane_regulation()
+
+    
+
+
+    def checkout_and_update(self): #Will check if customers have reached their calculated checkout times. If they have, delete them from stalls
+        self.ids_of_checked_out_customers = self.all_lanes.checkout() # an array that will hold ids of checked out customers collected from all lanes in the simulation
+        for i in (self.ids_of_checked_out_customers): # for all elements (customer ids) that have been handed over whe the checkout function of all lanes finished
+                    self.customers_who_have_checked_out += 1 # Increment the customers who left lanes count.
+                    self.all_customers.all_customers_ids.remove(i) # remove the id of the checked out customer from the all customer id array
+        return self.ids_of_checked_out_customers  # Once for loop complete, return,  with an array containing ids of checked out customers
+    
+    
+    
+    
+    def simulation_clearance(self):
+        """
+        A method that will reset all relevant AllLanes and AllCustomer attributes. Usually done at the start of the simulation
+        """
+
+            #Code below will clear lanes of all customers, both stall and waiting lanes
+        for i in self.all_lanes.lanes.values():
+                i.lane.clear()
+                i.stall.clear()
+                i.lane_lenght = 0
+                i.stall_lenght = 0
+
+
+        #Code Below will clear customer instances in all_customers class
+        self.all_customers.all_customers.clear() # Clear all Customers
+
+
+        #Code below will clear the rest of the essential variables and arrays
+        self.all_customers.all_customers_ids.clear()
+        self.all_customers.total_amount_of_customers = 0
+        self.all_customers.all_customers.clear()
+        self.all_customers.all_customers_ids.clear()
+        self.all_customers.lottery_winners.clear()
+        self.customers_who_have_checked_out = 0 
+
+
+        return # returns once the simulation is finished
+
+    
+    def simulation(self):
+        """
+        Method is designed to run the core events of the simulation
+        """
+
+        self.add_customers_to_lanes()  # During the while loop, customers will be added to each of the lanes, depending on their basket size and space availability. If no lanes are available for a customer to join, lane saturation will be displayed in the console
+
+        self.move_to_stalls()  # From the Events Class, trigger all lanes to move their customers to the stall array, if possible
+
+        self.all_lanes.checkout_times()  # From the Events Class, calculate the checkout times for all customers which are in stalls
+
+        self.checkout_and_update()
+
+        self.lane_regulation()  # From the Events Class, perform lane management on self_checkout classes, opening and closing them depending on the amount of customers in open lanes
+            
+
+
+    #Code below is a method which will display all customers in the simulation in console
+    #THIS WAS DONE BY PETER YOVCHEV FOR LOGBOOK TASK 1
+    #Please check the accompanying note file for a reference for which partner did what
+    def display_all_customers_in_console(self):
+        """
+        Author: Peter Yochev
+
+        A method in events class that will display all customers currnetly in the simulation
+        """
+        self._all_customers = [] # an array that will hold instances of all customers currently in the simulation
+        for i in self.all_lanes.lanes.values(): # for all lanes in simulation
+            self._all_customers += i.stall # add customers of stall to all customers
+            self._all_customers += i.lane # add customers in waiting lane to all customers
+        print(f"All Customers currnetly in simulation: {len(self._all_customers)} \n ")
+        for j in self._all_customers:
+            print(f"{j}  \n ")
+
+        return
+
+
+    #Code below is a method that displays all lanes in the simulation in the console
+    #THIS WAS DONE BY ALEKSANDAR BOZOV FOR LOGBOOK TASK 1
+    #Please check the accompanying note file for a reference for which partner did what
+    def display_all_lanes_in_console(self):
+         """
+         Author: Aleksandar Bozov
+         
+         A method that will display all lanes in the simulation in console
+         """
+        
+         print(f"Current Amount of Lanes in Simulation: {len(self.all_lanes.lanes.values())} \n ")
+    
+         for i in self.all_lanes.lanes.values():
+            print(f"{i}  \n ") 
+
+         return
+    
+    
+    
+
+
+            
+
+    
