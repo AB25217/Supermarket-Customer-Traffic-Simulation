@@ -1,0 +1,118 @@
+"""Author: Aleksandar Bozov and Peter Yovchev
+Description: To create a Simulation class from which you can run the simulation
+"""
+from Events import Events
+import time
+import random
+
+class Simulation:
+        """
+        Description: A simulation class, from which you can run the Supermarket Simulation
+
+        Parameters: 
+            Duration: How long do you want the simulation to run for
+
+            Intervals = how many intervals do you want in the simulation, where customers can be generated
+            
+            how_many_customers = how many customers do you want to generate over each iteration. Customer generated are random , but you are specifying the limit of the number of customers which can be generated
+
+        Attributes:
+            
+            events = a Events Class instance. Will be used for calling events in the simulation
+            
+            elapsed_time = the time passed during the simulation
+            
+            simulation_started = a flag that will be triggered when the simulation starts. Primarely used for GUI start buttons
+            
+            end_simulation = a flag which will stop the simulation when raised. Primarely used to give users ability to stop the simulation
+        
+        Methods:
+            
+            simulation_start: a method that will start the simulation when called
+
+        
+        """
+        def __init__(self, duration, intervals, how_many_customers):
+            self.events = Events() # Events class instance, from which customers and lanes can be manipulated with the use of event calling
+            self._elapsed_time = 0 # Elapsed time will be the time of the simulation since the start
+            
+            if not isinstance(duration, int) or duration < 1 or duration > 900:# if the duration parameter is not an integer or less than 1
+                raise ValueError("Duration Parameter is NOT an integer or is below 1. Try again")
+            self._time_duration = duration # will contain how lond the simulation is supposed to be ran for
+            self._at_what_intervals = intervals
+            if how_many_customers > 0:
+                self._amount_of_customers_to_generate = how_many_customers 
+            else:
+                raise ValueError("amount of customers specified cannot be zero or under")
+            self._simulation_started = False # This trigger will be for starting the simulation
+            self.end_simulation = True # End simulation trigger, which will be used to terimnate the simulation
+        
+
+        #Getter method for _elapsed_time
+        @property
+        def elapsed_time(self):
+            """Getter Method"""
+            return self._elapsed_time
+        
+        #Getter method for simulation started flag
+        @property
+        def simulation_started(self):
+            """Getter Method"""
+            return self._simulation_started
+        
+        #Setter Method for simulation started flag
+        @simulation_started.setter
+        def simulation_started(self, value):
+            if isinstance(value, bool) and value != self._simulation_started: # if value is boolean, and is not already the value of self_simulation started
+                self._simulation_started = value # assign value to simulation started
+                return 
+            raise ValueError("Value is not boolean or is already stored in flag. Try a different boolean value")
+        
+
+
+        def __generating_customers_intervals(self):
+            _test_array = [self._at_what_intervals, self._amount_of_customers_to_generate] # array here will be used for testing for errors
+
+            if all(isinstance(i, int) and i > 0 for i in _test_array): # if the numbers entered are not zero and are integers
+                if self._at_what_intervals <= self._time_duration: # if the intervals specified are less of the duration of the simulation
+                    interval_lenght = self._time_duration / self._at_what_intervals # finding out the duration of each interval by dividing the simulation duration with the amount of intervals
+                    duration = self._time_duration # store the time duration of the simulation in an duration variable for calculations
+                    time_of_intervals = [] # this array will hold the time that each interval must occur
+                    for i in range(self._at_what_intervals): # for the range of intervals specified
+                            duration -= interval_lenght # subract interval lenght from duration
+                            time_of_intervals.append(duration) # append the subtracted duration as an element of the time of intervals array
+                    return sorted(time_of_intervals) # return the time of intervals array but sorted
+                            
+                            
+                             
+                raise ValueError("Intervals are greater or equal to the duration of the simulation. Change interval parameter please")
+            raise ValueError("Parameters entered are negative, zero or not integers. Try again") # return this value error
+        
+        #Code below will be a method that will reset all relevant simulation and events instance class variables when called
+        def simulation_start(self): 
+            self._intervals = self.__generating_customers_intervals() # intervals array that will hold the interval times for the simulation
+            self._simulation_started = True # raise the flag that the simulation has started
+            self.events.simulation_clearance() # clears the simulation from all previously used attributes
+            self._start_time = time.time() # Start time will be the time the method was initialised
+               
+                # The below code will be iterated for every second until time reaches 65 seconds
+            while self._elapsed_time <= self._time_duration: # While elapsed time is below or equal to the time duration set
+                self._elapsed_time = time.time() - self._start_time # subtract current time with start time and store in elapsed time
+                
+                for i in self._intervals: # for the intervals set
+                    if self._elapsed_time >= i: # if elapsed time has passed over the selected interval
+                        self._intervals.remove(i) # delete the interval from the interval array
+                        self.events.all_customers.generate_customers(random.randint(1, self._amount_of_customers_to_generate))
+                
+                self.events.simulation() # run the self.Events simulation events and iterate over them
+                if self.end_simulation == True: # if end flag has been raised
+                    break # break loop
+                
+                time.sleep(1) # pauses the simulation of the while loop for one second to deal with resource allocation with other concurring methods
+            
+            #Once While loop is completed, the simulation thread will terminate
+            self._simulation_started = False      
+            return 
+
+
+
